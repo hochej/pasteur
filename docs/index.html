@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pasteur</title>
+    <meta
+      name="description"
+      content="Pasteur is a macOS menu bar app that turns clipboard molecules into a floating 3D viewer in a single hotkey."
+    />
+    <meta name="theme-color" content="#0b0f14" />
+    <link rel="canonical" href="https://pasteur.bar/" />
+    <meta property="og:title" content="Pasteur" />
+    <meta
+      property="og:description"
+      content="Instant molecular structure visualization from your clipboard. Copy a PDB, press a hotkey, and a floating viewer appears."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pasteur.bar/" />
+    <meta property="og:image" content="https://pasteur.bar/icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="./icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    <link rel="stylesheet" href="./site.css?v=20250301a" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Newsreader:opsz,wght@6..72,300..700&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top" data-animate="1">
+        <a class="brand" href="https://pasteur.bar/" aria-label="Pasteur home">
+          <span class="mark">
+            <img src="./icon.png" alt="" width="44" height="44" aria-hidden="true" />
+          </span>
+          <span class="wordmark">
+            <span class="title">Pasteur</span>
+            <span class="tagline">Clipboard to molecule, instantly.</span>
+          </span>
+        </a>
+        <nav class="links" aria-label="Links">
+          <a class="btn primary" href="https://github.com/hochej/pasteur/releases/latest">Download</a>
+          <a class="btn ghost" href="https://github.com/hochej/pasteur">Source</a>
+        </nav>
+      </header>
+
+      <section class="hero" aria-label="Overview" data-animate="2">
+        <div class="copy">
+          <div class="badge-row" aria-label="Highlights">
+            <span class="badge">macOS menu bar</span>
+            <span class="badge">On-device only</span>
+            <span class="badge">PDB, mmCIF, SDF, MOL2, XYZ</span>
+          </div>
+          <h1>Instant molecular structure previews from your clipboard.</h1>
+          <p>
+            Pasteur sits quietly in your menu bar. Copy a molecule, hit your hotkey, and a floating 3D viewer appears.
+            No Dock icon. No network calls. Just a fast, focused visual check.
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="#download">Get Pasteur</a>
+            <a class="btn" href="#how">How it works</a>
+          </div>
+          <div class="keyline" aria-label="Default hotkey example">
+            <span class="key">Cmd</span>
+            <span class="key">Shift</span>
+            <span class="key">V</span>
+            <span class="key-label">Default hotkey</span>
+          </div>
+          <ul class="bullets" aria-label="What it does">
+            <li>Detects molecular formats with zero clicks.</li>
+            <li>Preloads the viewer for sub-second reveals.</li>
+            <li>Privacy-first: clipboard reads only on explicit action.</li>
+          </ul>
+        </div>
+        <div class="specimen" aria-hidden="true">
+          <div class="specimen-header">
+            <span class="specimen-title">Specimen Viewer</span>
+            <span class="pill">Ready</span>
+          </div>
+          <div class="specimen-body">
+            <div class="molecule">
+              <span class="bond b1"></span>
+              <span class="bond b2"></span>
+              <span class="bond b3"></span>
+              <span class="bond b4"></span>
+              <span class="bond b5"></span>
+              <span class="atom a1"></span>
+              <span class="atom a2"></span>
+              <span class="atom a3"></span>
+              <span class="atom a4"></span>
+              <span class="atom a5"></span>
+              <span class="atom a6"></span>
+            </div>
+            <div class="scanline"></div>
+          </div>
+          <div class="specimen-footer">
+            <div class="stat">
+              <span class="stat-label">Format</span>
+              <span class="stat-value">PDB</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Atoms</span>
+              <span class="stat-value">3,412</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Load</span>
+              <span class="stat-value">&lt; 1s</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="steps" id="how" aria-label="How it works" data-reveal>
+        <div class="section-title">
+          <h2>Three moves. One molecule.</h2>
+          <p>Pasteur is tuned for instant validation while you work.</p>
+        </div>
+        <div class="step-grid">
+          <article class="step">
+            <span class="step-index">01</span>
+            <h3>Copy</h3>
+            <p>Grab a structure in PDB, mmCIF, SDF, MOL2, MOL, or XYZ.</p>
+          </article>
+          <article class="step">
+            <span class="step-index">02</span>
+            <h3>Hotkey</h3>
+            <p>Hit your global shortcut. Pasteur reads the clipboard on demand.</p>
+          </article>
+          <article class="step">
+            <span class="step-index">03</span>
+            <h3>View</h3>
+            <p>A floating panel appears with Molstar ready to rotate, inspect, and screenshot.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="features" aria-label="Features" data-reveal>
+        <div class="card">
+          <h3>Format intelligence</h3>
+          <p>MOL2, SDF, MOL, PDB, CIF, XYZ. Detected in priority order with fast heuristics.</p>
+        </div>
+        <div class="card">
+          <h3>Zero friction</h3>
+          <p>Viewer preloads at launch, so the hotkey path stays sub-second.</p>
+        </div>
+        <div class="card">
+          <h3>Private by design</h3>
+          <p>No background scraping. Clipboard reads happen only when you ask.</p>
+        </div>
+      </section>
+
+      <section class="formats" aria-label="Supported formats" data-reveal>
+        <div class="section-title">
+          <h2>Formats with a point of view.</h2>
+          <p>Most specific first, every time.</p>
+        </div>
+        <div class="format-grid">
+          <div class="format">
+            <span class="format-tag">MOL2</span>
+            <p>Tripos sections detected by @&lt;TRIPOS&gt;.</p>
+          </div>
+          <div class="format">
+            <span class="format-tag">SDF / MOL</span>
+            <p>V2000 / V3000 blocks with M  END signatures.</p>
+          </div>
+          <div class="format">
+            <span class="format-tag">PDB / mmCIF</span>
+            <p>ATOM, HETATM, HEADER, or data_/_atom_site cues.</p>
+          </div>
+          <div class="format">
+            <span class="format-tag">XYZ</span>
+            <p>Atom counts and coordinate lines for quick sanity checks.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-panel" id="download" aria-label="Download" data-reveal>
+        <div class="cta-copy">
+          <h2>Pasteur lives where you work.</h2>
+          <p>
+            A lightweight menu bar companion built for scientists who live in terminals, editors, and notebooks. Free
+            and open source.
+          </p>
+        </div>
+        <div class="cta-actions">
+          <a class="btn primary" href="https://github.com/hochej/pasteur/releases/latest">Download latest</a>
+          <a class="btn" href="https://github.com/hochej/pasteur">View source</a>
+        </div>
+      </section>
+
+      <footer class="foot" data-reveal>
+        <p>
+          Pasteur is MIT licensed. Built for macOS, powered by Molstar. Hosted at
+          <a href="https://pasteur.bar/">pasteur.bar</a>.
+        </p>
+      </footer>
+    </main>
+
+    <script>
+      const revealTargets = document.querySelectorAll("[data-reveal]");
+      const reveal = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              reveal.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.2 }
+      );
+      revealTargets.forEach(target => reveal.observe(target));
+    </script>
+  </body>
+</html>

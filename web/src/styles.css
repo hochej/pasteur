@@ -1,0 +1,142 @@
+:root {
+  color-scheme: dark;
+  --ink: #f4f3f0;
+  --ink-muted: rgba(244, 243, 240, 0.65);
+  --bg-deep: #0b0f14;
+  --bg-soft: #121822;
+  --panel-alpha: 0.7;
+  --panel: rgba(14, 18, 24, var(--panel-alpha));
+  --panel-border: rgba(244, 243, 240, 0.12);
+  --accent: #4fb7a8;
+  --shadow: 0 14px 30px rgba(3, 6, 10, 0.45);
+  --font-body: "Avenir Next", "Gill Sans", sans-serif;
+  --font-mono: "Menlo", "SF Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: rgba(11, 15, 20, var(--panel-alpha));
+  color: var(--ink);
+  font-family: var(--font-body);
+  letter-spacing: 0.01em;
+}
+
+#app {
+  position: relative;
+  overflow: hidden;
+}
+
+#viewer {
+  position: absolute;
+  inset: 0;
+}
+
+#nav {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 4;
+}
+
+#nav button {
+  appearance: none;
+  border: 1px solid rgba(244, 243, 240, 0.18);
+  background: rgba(12, 16, 22, 0.45);
+  color: var(--ink);
+  width: 30px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 140ms ease, border 140ms ease, transform 140ms ease;
+}
+
+#nav button svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+#nav button:hover {
+  border-color: rgba(79, 183, 168, 0.45);
+  background: rgba(79, 183, 168, 0.18);
+  transform: translateY(-1px);
+}
+
+#nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+}
+
+body.capture #nav,
+body.capture #overlay {
+  display: none;
+}
+
+
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 8, 12, 0.55);
+  color: var(--ink);
+  z-index: 4;
+}
+
+#overlay.hidden {
+  display: none;
+}
+
+.overlay-card {
+  padding: 18px 22px;
+  border-radius: 14px;
+  background: rgba(12, 16, 22, 0.85);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow);
+  max-width: 360px;
+  text-align: center;
+}
+
+#overlay-title {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+#overlay-message {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+body.molstar-ui-hidden .msp-layout-controls,
+body.molstar-ui-hidden .msp-layout-left,
+body.molstar-ui-hidden .msp-layout-right,
+body.molstar-ui-hidden .msp-layout-top,
+body.molstar-ui-hidden .msp-layout-bottom,
+body.molstar-ui-hidden .msp-viewport-top-left,
+body.molstar-ui-hidden .msp-viewport-top-right,
+body.molstar-ui-hidden .msp-viewport-controls,
+body.molstar-ui-hidden .msp-viewport-info,
+body.molstar-ui-hidden .msp-sequence-wrapper,
+body.molstar-ui-hidden .msp-log-panel {
+  display: none !important;
+}
