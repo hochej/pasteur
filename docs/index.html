@@ -22,7 +22,8 @@
 
     <link rel="icon" href="./icon.png" type="image/png" />
     <link rel="apple-touch-icon" href="./icon.png" />
-    <link rel="stylesheet" href="./site.css?v=20250301a" />
+    <link rel="stylesheet" href="./molstar/molstar.css" />
+    <link rel="stylesheet" href="./site.css?v=20250301f" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -76,40 +77,25 @@
             <li>Privacy-first: clipboard reads only on explicit action.</li>
           </ul>
         </div>
-        <div class="specimen" aria-hidden="true">
+        <div class="specimen" role="region" aria-label="Clipboard viewer demo">
           <div class="specimen-header">
-            <span class="specimen-title">Specimen Viewer</span>
-            <span class="pill">Ready</span>
+            <span class="specimen-title">Clipboard Viewer</span>
+            <span class="pill">Live demo</span>
           </div>
           <div class="specimen-body">
-            <div class="molecule">
-              <span class="bond b1"></span>
-              <span class="bond b2"></span>
-              <span class="bond b3"></span>
-              <span class="bond b4"></span>
-              <span class="bond b5"></span>
-              <span class="atom a1"></span>
-              <span class="atom a2"></span>
-              <span class="atom a3"></span>
-              <span class="atom a4"></span>
-              <span class="atom a5"></span>
-              <span class="atom a6"></span>
+            <div class="viewer-frame">
+              <div id="molstar-viewer" class="molstar-host" aria-label="Molecular structure preview"></div>
+              <div class="viewer-overlay" aria-live="polite">
+                <span class="viewer-status" id="viewer-status">Initializing viewer...</span>
+              </div>
             </div>
-            <div class="scanline"></div>
           </div>
           <div class="specimen-footer">
-            <div class="stat">
-              <span class="stat-label">Format</span>
-              <span class="stat-value">PDB</span>
+            <div class="viewer-actions">
+              <button class="btn primary compact" id="clipboard-btn" type="button">Render from clipboard</button>
+              <button class="btn compact" id="sample-btn" type="button">Load example</button>
             </div>
-            <div class="stat">
-              <span class="stat-label">Atoms</span>
-              <span class="stat-value">3,412</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label">Load</span>
-              <span class="stat-value">&lt; 1s</span>
-            </div>
+            <div class="viewer-hint" id="viewer-hint">Paste PDB, mmCIF, SDF, MOL2, MOL, or XYZ.</div>
           </div>
         </div>
       </section>
@@ -200,6 +186,7 @@
       </footer>
     </main>
 
+    <script src="./molstar/molstar.js"></script>
     <script>
       const revealTargets = document.querySelectorAll("[data-reveal]");
       const reveal = new IntersectionObserver(
@@ -214,6 +201,182 @@
         { threshold: 0.2 }
       );
       revealTargets.forEach(target => reveal.observe(target));
+
+      const viewerHost = document.getElementById("molstar-viewer");
+      const statusEl = document.getElementById("viewer-status");
+      const overlayEl = document.querySelector(".viewer-overlay");
+      const clipboardBtn = document.getElementById("clipboard-btn");
+      const sampleBtn = document.getElementById("sample-btn");
+      const hintEl = document.getElementById("viewer-hint");
+
+      const sampleStructure = `12
+Benzene
+C 0.000 1.396 0.000
+C 1.209 0.698 0.000
+C 1.209 -0.698 0.000
+C 0.000 -1.396 0.000
+C -1.209 -0.698 0.000
+C -1.209 0.698 0.000
+H 0.000 2.479 0.000
+H 2.147 1.240 0.000
+H 2.147 -1.240 0.000
+H 0.000 -2.479 0.000
+H -2.147 -1.240 0.000
+H -2.147 1.240 0.000`;
+
+      let viewer = null;
+
+      const setStatus = (message, tone) => {
+        if (!statusEl) return;
+        statusEl.textContent = message;
+        if (tone) {
+          statusEl.dataset.tone = tone;
+        } else {
+          statusEl.removeAttribute("data-tone");
+        }
+        if (overlayEl) {
+          const hideOverlay = tone === "ready" || !tone;
+          overlayEl.classList.toggle("is-hidden", hideOverlay);
+        }
+      };
+
+      const detectFormat = text => {
+        const trimmed = text.trim();
+        if (!trimmed) return null;
+        const upper = trimmed.toUpperCase();
+        if (upper.includes("@<TRIPOS>")) return "mol2";
+        if (upper.includes("$$$$") && upper.includes("M  END")) return "sdf";
+        if (upper.includes("M  END") && (upper.includes("V2000") || upper.includes("V3000"))) return "mol";
+        if (/^(ATOM|HETATM|HEADER|MODEL)/m.test(trimmed)) return "pdb";
+        if (/^data_/m.test(trimmed) || /_atom_site\\./.test(trimmed)) return "mmcif";
+        const firstLine = trimmed.split(/\\r?\\n/)[0]?.trim();
+        if (firstLine && /^\\d+$/.test(firstLine)) return "xyz";
+        return null;
+      };
+
+      const loadStructure = async (data, format, label) => {
+        if (!viewer) return;
+        setStatus(`Loading ${label} (${format.toUpperCase()})...`, "busy");
+        try {
+          await viewer.plugin.clear();
+          await viewer.loadStructureFromData(data, format, { dataLabel: label });
+          setStatus(`Loaded ${label} (${format.toUpperCase()})`, "ready");
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          setStatus(`Unable to render molecule: ${message}`, "error");
+        }
+      };
+
+      const initViewer = async () => {
+        if (!viewerHost || !window.molstar) {
+          setStatus("Viewer unavailable.", "error");
+          return;
+        }
+        try {
+          viewer = await window.molstar.Viewer.create(viewerHost, {
+            layoutIsExpanded: false,
+            layoutShowControls: false,
+            layoutShowRemoteState: false,
+            layoutShowSequence: false,
+            layoutShowLog: false,
+            layoutShowLeftPanel: false,
+            layoutShowRightPanel: false,
+            layoutShowMainMenu: false,
+            collapseLeftPanel: true,
+            collapseRightPanel: true,
+            viewportShowControls: false,
+            viewportShowReset: false,
+            viewportShowSettings: false,
+            viewportShowSelectionMode: false,
+            viewportShowAnimation: false,
+            viewportShowScreenshotControls: false,
+            viewportShowToggleFullscreen: false,
+            viewportShowTrajectoryControls: false,
+            viewportShowExpand: false
+          });
+          viewer.plugin.canvas3d?.setProps({
+            transparentBackground: false,
+            checkeredTransparentBackground: false,
+            renderer: { backgroundColor: 0x0b0f14 },
+            camera: {
+              helper: {
+                axes: { name: "off", params: {} }
+              }
+            }
+          });
+          viewer.plugin.layout.setProps({
+            isExpanded: false,
+            showControls: false,
+            regionState: {
+              left: "hidden",
+              right: "hidden",
+              top: "hidden",
+              bottom: "hidden"
+            }
+          });
+          requestAnimationFrame(() => {
+            viewer?.handleResize();
+          });
+          if (!navigator.clipboard?.readText) {
+            if (hintEl) {
+              hintEl.textContent = "Clipboard access requires https + permission.";
+            }
+          }
+          await loadStructure(sampleStructure, "xyz", "Example");
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          setStatus(`Viewer failed: ${message}`, "error");
+        }
+      };
+
+      const loadFromClipboard = async () => {
+        if (!navigator.clipboard?.readText) {
+          setStatus("Clipboard access is not available in this browser.", "error");
+          return;
+        }
+        try {
+          setStatus("Reading clipboard...", "busy");
+          const text = await navigator.clipboard.readText();
+          const format = detectFormat(text);
+          if (!format) {
+            setStatus("Clipboard format not recognized.", "error");
+            return;
+          }
+          await loadStructure(text, format, "Clipboard");
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          setStatus(`Clipboard read failed: ${message}`, "error");
+        }
+      };
+
+      if (clipboardBtn) {
+        clipboardBtn.addEventListener("click", () => {
+          void loadFromClipboard();
+        });
+      }
+
+      if (sampleBtn) {
+        sampleBtn.addEventListener("click", () => {
+          void loadStructure(sampleStructure, "xyz", "Example");
+        });
+      }
+
+      if (!navigator.clipboard?.readText && clipboardBtn) {
+        clipboardBtn.disabled = true;
+      }
+
+      if (viewerHost && window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(() => {
+          viewer?.handleResize();
+        });
+        resizeObserver.observe(viewerHost);
+      }
+
+      window.addEventListener("unload", () => {
+        viewer?.dispose();
+      });
+
+      void initViewer();
     </script>
   </body>
 </html>

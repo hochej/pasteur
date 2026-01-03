@@ -341,6 +341,141 @@ code {
     radial-gradient(240px 180px at 40% 80%, rgba(240, 180, 62, 0.18), transparent 70%),
     linear-gradient(160deg, rgba(15, 22, 30, 0.9), rgba(10, 14, 20, 0.9));
   overflow: hidden;
+  padding: 8px;
+}
+
+.viewer-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--radius-sm) - 6px);
+  overflow: hidden;
+  border: 1px solid rgba(246, 242, 234, 0.08);
+  background: #0b0f14;
+}
+
+.molstar-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#molstar-viewer {
+  background: #0b0f14;
+}
+
+#molstar-viewer .msp-plugin {
+  background: #0b0f14;
+}
+
+#molstar-viewer canvas {
+  background: #0b0f14;
+  display: block;
+}
+
+#molstar-viewer .msp-layout-standard,
+#molstar-viewer .msp-layout-expanded,
+#molstar-viewer .msp-layout-standard-outside {
+  background: transparent;
+  border: none;
+}
+
+#molstar-viewer .msp-layout-region,
+#molstar-viewer .msp-layout-main {
+  background: transparent;
+}
+
+#molstar-viewer .msp-layout-top,
+#molstar-viewer .msp-layout-bottom,
+#molstar-viewer .msp-layout-left,
+#molstar-viewer .msp-layout-right {
+  display: none;
+}
+
+#molstar-viewer .msp-layout-main,
+#molstar-viewer .msp-layout-standard-outside .msp-layout-main {
+  inset: 0 !important;
+}
+
+#molstar-viewer .msp-viewport-controls,
+#molstar-viewer .msp-viewport-top-left-controls,
+#molstar-viewer .msp-viewport-controls-panel,
+#molstar-viewer .msp-highlight-toast-wrapper,
+#molstar-viewer .msp-logo {
+  display: none !important;
+}
+
+.viewer-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  pointer-events: none;
+}
+
+.viewer-overlay.is-hidden {
+  display: none;
+}
+
+.viewer-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid rgba(246, 242, 234, 0.18);
+  background: rgba(12, 16, 22, 0.7);
+  color: var(--ink);
+}
+
+.viewer-status[data-tone="busy"] {
+  border-color: rgba(240, 180, 62, 0.5);
+  color: var(--accent);
+}
+
+.viewer-status[data-tone="ready"] {
+  border-color: rgba(40, 179, 155, 0.6);
+  color: var(--accent-2);
+}
+
+.viewer-status[data-tone="error"] {
+  border-color: rgba(232, 99, 59, 0.6);
+  color: var(--accent-3);
+}
+
+.specimen-footer {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.viewer-hint {
+  flex-basis: 100%;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.btn.compact {
+  padding: 8px 11px;
+  font-size: 11px;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .molecule {
