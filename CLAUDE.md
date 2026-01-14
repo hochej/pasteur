@@ -24,6 +24,11 @@ pasteur/
 │       ├── ViewerPanelController.swift
 │       ├── WebViewBridge.swift
 │       └── Resources/web-dist/   # Generated from web build
+├── docs/                     # Static marketing site (Cloudflare Pages)
+│   ├── index.html
+│   ├── site.css
+│   ├── icon.png
+│   └── _redirects
 ├── web/                      # TypeScript viewer
 │   ├── package.json
 │   ├── vite.config.ts
@@ -50,6 +55,12 @@ bun build                    # Outputs to web/dist/
 # macOS app
 # Build via Xcode or xcodebuild from macos/
 ```
+
+## Website (Cloudflare Pages)
+
+- Static site lives in `docs/` and is served at https://pasteur.bar.
+- Cloudflare Pages is configured with no build command and build output directory `docs`.
+- The `docs/_redirects` file forces `www.pasteur.bar` to redirect to the apex domain.
 
 ## Architecture
 

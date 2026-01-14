@@ -8,6 +8,7 @@ declare global {
       clearFromNative: () => void;
       exportFromNative: (payload: ExportRequest) => void;
       configureFromNative: (payload: UIConfig) => void;
+      prewarmFromNative: () => void;
     };
     webkit?: {
       messageHandlers?: {
@@ -249,6 +250,17 @@ export function initBridge(viewer: Viewer) {
     configureFromNative: (payload: UIConfig) => {
       overlayDelayMs = payload.overlayDelayMs ?? overlayDelayMs;
       applyHudConfig({ ...defaultConfig, ...payload, hud: { ...defaultConfig.hud, ...payload.hud } });
+    },
+    prewarmFromNative: async () => {
+      try {
+        const data = "1\n\nH 0 0 0";
+        await viewer.plugin.clear();
+        await viewer.loadStructureFromData(data, "xyz");
+        await viewer.plugin.clear();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn("Prewarm failed", message);
+      }
     }
   };
 

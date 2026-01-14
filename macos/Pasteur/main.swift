@@ -1,6 +1,6 @@
 import AppKit
 
-print("[Pasteur] Starting app...")
+Logger.log("[Pasteur] Starting app...")
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

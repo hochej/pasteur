@@ -46,6 +46,9 @@ final class WebViewBridge: NSObject {
     private var isReady = false
     private var pendingLoad: LoadRequest?
     private var pendingConfig: UIConfig?
+    var hasPendingLoad: Bool {
+        pendingLoad != nil
+    }
 
     init(webView: WKWebView) {
         self.webView = webView
@@ -58,7 +61,7 @@ final class WebViewBridge: NSObject {
             return
         }
 
-        print("[Pasteur] Sending load id=\(request.id) format=\(request.format) bytes=\(request.data.utf8.count)")
+        Logger.log("[Pasteur] Sending load id=\(request.id) format=\(request.format) bytes=\(request.data.utf8.count)")
         invoke(function: "loadFromNative", payload: request)
     }
 
@@ -89,6 +92,10 @@ final class WebViewBridge: NSObject {
 
     func sendExport(_ request: ExportRequest) {
         invoke(function: "exportFromNative", payload: request)
+    }
+
+    func sendPrewarm() {
+        evaluate(function: "prewarmFromNative")
     }
 
     private func invoke<T: Encodable>(function: String, payload: T) {
@@ -148,7 +155,7 @@ extension WebViewBridge: WKScriptMessageHandler {
         case "log":
             let level = body["level"] as? String ?? "log"
             let messageText = body["message"] as? String ?? ""
-            print("[Pasteur][JS][\(level)] \(messageText)")
+            Logger.log("[Pasteur][JS][\(level)] \(messageText)")
         case "copyRequest":
             guard let text = body["data"] as? String else { return }
             delegate?.webViewBridge(self, didRequestCopy: text)

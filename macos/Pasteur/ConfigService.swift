@@ -50,7 +50,7 @@ final class ConfigService {
                 debugLogging: debugLogging
             )
         } catch {
-            print("[Pasteur] Failed to parse config at \(url.path): \(error)")
+            Logger.log("[Pasteur] Failed to parse config at \(url.path): \(error)")
             return AppConfig(
                 ui: defaultUIConfig(),
                 popover: defaultPopoverConfig(),
@@ -60,6 +60,32 @@ final class ConfigService {
                 hotkey: defaultHotkeyConfig(),
                 debugLogging: false
             )
+        }
+    }
+
+    func saveConfig(_ config: AppConfig) {
+        let url = configURL()
+        let fileConfig = FileConfig(
+            hud: config.ui.hud,
+            overlayDelayMs: config.ui.overlayDelayMs,
+            hideMolstarUi: config.ui.hideMolstarUi,
+            panelAlpha: config.ui.panelAlpha,
+            popover: config.popover,
+            clipboardMonitor: config.clipboardMonitor,
+            screenshotDirectory: pathForConfig(config.screenshotDirectory),
+            screenshotReveal: config.screenshotReveal,
+            hotkey: config.hotkey,
+            debugLogging: config.debugLogging
+        )
+
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(fileConfig)
+            try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+        } catch {
+            Logger.log("[Pasteur] Failed to save config: \(error)")
         }
     }
 
@@ -115,6 +141,16 @@ final class ConfigService {
         }
         let expanded = (path as NSString).expandingTildeInPath
         return URL(fileURLWithPath: expanded, isDirectory: true)
+    }
+
+    private func pathForConfig(_ url: URL) -> String {
+        let home = fileManager.homeDirectoryForCurrentUser.path
+        let path = url.standardizedFileURL.path
+        if path.hasPrefix(home) {
+            let suffix = path.dropFirst(home.count)
+            return "~" + suffix
+        }
+        return path
     }
 
     private func mergeUIConfig(_ fileConfig: FileConfig) -> WebViewBridge.UIConfig {
