@@ -1,5 +1,9 @@
 # Pasteur
 
+<p align="center">
+  <img src="docs/icon.png" alt="Pasteur logo" width="96" height="96" />
+</p>
+
 Pasteur is a macOS menu bar app for instant molecular structure visualization from clipboard content (PDB/mmCIF/XYZ/MOL/SDF/MOL2).
 
 ## Development
