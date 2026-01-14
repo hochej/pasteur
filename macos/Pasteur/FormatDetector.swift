@@ -71,10 +71,31 @@ final class FormatDetector {
     }
 
     private func isLikelyXYZ(_ text: String) -> Bool {
-        let lines = text.split(whereSeparator: \.isNewline).map { String($0).trimmingCharacters(in: .whitespaces) }
+        let lines = text
+            .split(whereSeparator: \.isNewline)
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
         guard lines.count >= 3 else { return false }
-        guard let atomCount = Int(lines[0]), atomCount > 0 else { return false }
-        let atomLines = lines.dropFirst(2)
-        return atomLines.prefix(atomCount).allSatisfy { !$0.isEmpty }
+
+        let firstTokens = lines[0].split(whereSeparator: \.isWhitespace)
+        if let firstToken = firstTokens.first, let atomCount = Int(firstToken), atomCount > 0 {
+            let startsWithAtom = lines.count > 1 && looksLikeAtomRecord(lines[1])
+            let atomLines = startsWithAtom ? lines.dropFirst(1) : lines.dropFirst(2)
+            guard atomLines.count >= atomCount else { return false }
+            return atomLines.prefix(atomCount).allSatisfy { looksLikeAtomRecord($0) }
+        }
+
+        if looksLikeAtomRecord(lines[0]) {
+            return lines.allSatisfy { looksLikeAtomRecord($0) }
+        }
+
+        return false
+    }
+
+    private func looksLikeAtomRecord(_ line: String) -> Bool {
+        let tokens = line.split(whereSeparator: \.isWhitespace)
+        guard tokens.count >= 4 else { return false }
+        return tokens[1...3].allSatisfy { Double($0) != nil }
     }
 }
+

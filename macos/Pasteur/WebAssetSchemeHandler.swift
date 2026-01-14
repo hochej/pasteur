@@ -5,6 +5,8 @@ final class WebAssetSchemeHandler: NSObject, WKURLSchemeHandler {
     static let scheme = "pasteur"
 
     var assetRoot: URL?
+    private let ioQueue = DispatchQueue(label: "pasteur.webassets", qos: .userInitiated)
+    private var cancelledTasks = Set<ObjectIdentifier>()
 
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
         guard let assetRoot else {
@@ -20,11 +22,14 @@ final class WebAssetSchemeHandler: NSObject, WKURLSchemeHandler {
         let host = url.host ?? ""
         let pathComponents = url.path.split(separator: "/").map(String.init)
         var components: [String] = []
-        if !host.isEmpty {
+        if !host.isEmpty, host != "index.html" {
             components.append(host)
         }
         components.append(contentsOf: pathComponents)
         var relativePath = components.joined(separator: "/")
+        if relativePath.hasPrefix("index.html/") {
+            relativePath = String(relativePath.dropFirst("index.html/".count))
+        }
         if relativePath.isEmpty {
             relativePath = "index.html"
         }
@@ -32,28 +37,45 @@ final class WebAssetSchemeHandler: NSObject, WKURLSchemeHandler {
         let standardizedRoot = assetRoot.standardizedFileURL
         let candidateURL = assetRoot.appendingPathComponent(relativePath).standardizedFileURL
         guard candidateURL.pathComponents.starts(with: standardizedRoot.pathComponents) else {
-            print("[Pasteur] Scheme blocked traversal \(url.absoluteString)")
+            Logger.log("[Pasteur] Scheme blocked traversal \(url.absoluteString)")
             urlSchemeTask.didFailWithError(NSError(domain: "Pasteur", code: 4))
             return
         }
         let fileURL = candidateURL
-        print("[Pasteur] Scheme request \(url.absoluteString) -> \(fileURL.path)")
+        Logger.log("[Pasteur] Scheme request \(url.absoluteString) -> \(fileURL.path)")
 
-        guard let data = try? Data(contentsOf: fileURL) else {
-            print("[Pasteur] Scheme failed to read \(fileURL.path)")
-            urlSchemeTask.didFailWithError(NSError(domain: "Pasteur", code: 3))
-            return
+        let taskId = ObjectIdentifier(urlSchemeTask)
+        ioQueue.async { [weak self] in
+            guard let self else { return }
+            if self.cancelledTasks.contains(taskId) {
+                self.cancelledTasks.remove(taskId)
+                return
+            }
+
+            guard let data = try? Data(contentsOf: fileURL) else {
+                Logger.log("[Pasteur] Scheme failed to read \(fileURL.path)")
+                urlSchemeTask.didFailWithError(NSError(domain: "Pasteur", code: 3))
+                return
+            }
+
+            if self.cancelledTasks.contains(taskId) {
+                self.cancelledTasks.remove(taskId)
+                return
+            }
+
+            let mimeType = self.mimeTypeForPath(fileURL.path)
+            let response = URLResponse(url: url, mimeType: mimeType, expectedContentLength: data.count, textEncodingName: nil)
+            urlSchemeTask.didReceive(response)
+            urlSchemeTask.didReceive(data)
+            urlSchemeTask.didFinish()
         }
-
-        let mimeType = mimeTypeForPath(fileURL.path)
-        let response = URLResponse(url: url, mimeType: mimeType, expectedContentLength: data.count, textEncodingName: nil)
-        urlSchemeTask.didReceive(response)
-        urlSchemeTask.didReceive(data)
-        urlSchemeTask.didFinish()
     }
 
     func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
-        // No-op.
+        let taskId = ObjectIdentifier(urlSchemeTask)
+        ioQueue.async { [weak self] in
+            self?.cancelledTasks.insert(taskId)
+        }
     }
 
     private func mimeTypeForPath(_ path: String) -> String {

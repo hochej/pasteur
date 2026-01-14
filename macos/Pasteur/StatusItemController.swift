@@ -58,7 +58,7 @@ final class StatusItemController {
             return
         }
         image.isTemplate = true
-        image.size = NSSize(width: 16, height: 16)
+        image.size = NSSize(width: 18, height: 18)
         statusItem.button?.image = image
         statusItem.button?.imageScaling = .scaleProportionallyDown
     }

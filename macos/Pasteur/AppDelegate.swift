@@ -14,12 +14,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var preferencesController: PreferencesController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Logger.log("[Pasteur] Application did finish launching.")
         NSApp.setActivationPolicy(.accessory)
 
         let config = configService.loadConfig()
         appConfig = config
         Logger.enabled = config.debugLogging
+        Logger.log("[Pasteur] Application did finish launching.")
         NotificationService.shared.requestAuthorization()
 
         statusItemController = StatusItemController(
@@ -51,11 +51,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         return
                     }
                     guard let format = self.formatDetector.detectFormat(for: text) else { return }
+                    let payload = format == "xyz" ? self.normalizeXYZ(text) : text
                     Logger.log("[Pasteur] Clipboard match format=\(format) bytes=\(text.utf8.count)")
                     DispatchQueue.main.async {
                         if clipboardConfig.autoShow {
                             self.viewerPanelController?.show()
-                            self.viewerPanelController?.load(format: format, data: text)
+                            self.viewerPanelController?.load(format: format, data: payload)
                         }
                     }
                 }
@@ -67,9 +68,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if config.clipboardMonitor.enabled, let text = clipboardService.readString() {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if let format = formatDetector.detectFormat(for: trimmed), config.clipboardMonitor.autoShow {
+                let payload = format == "xyz" ? normalizeXYZ(text) : text
                 DispatchQueue.main.async { [weak self] in
                     self?.viewerPanelController?.show()
-                    self?.viewerPanelController?.load(format: format, data: text)
+                    self?.viewerPanelController?.load(format: format, data: payload)
                 }
             }
         }
@@ -106,14 +108,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handlePreferences() {
-        if preferencesController == nil {
-            preferencesController = PreferencesController(
-                config: appConfig ?? configService.loadConfig(),
-                onSave: { [weak self] config in
-                    self?.applyConfig(config)
-                }
-            )
-        }
+        let config = appConfig ?? configService.loadConfig()
+        preferencesController = PreferencesController(
+            config: config,
+            onSave: { [weak self] updated in
+                self?.configService.saveConfig(updated)
+                self?.applyConfig(updated)
+            }
+        )
         preferencesController?.show()
     }
 
@@ -149,9 +151,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 if text.utf8.count > 5_000_000 { return }
                 guard let format = self.formatDetector.detectFormat(for: text) else { return }
+                let payload = format == "xyz" ? self.normalizeXYZ(text) : text
                 if config.clipboardMonitor.autoShow {
                     self.viewerPanelController?.show()
-                    self.viewerPanelController?.load(format: format, data: text)
+                    self.viewerPanelController?.load(format: format, data: payload)
                 }
             }
             clipboardMonitor = monitor
@@ -161,20 +164,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func normalizeXYZ(_ text: String) -> String {
         let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).map(String.init)
-        guard lines.count >= 2 else { return text }
-        let line1 = lines[1].trimmingCharacters(in: .whitespaces)
-        if line1.isEmpty {
-            return text
+        guard !lines.isEmpty else { return text }
+
+        let trimmed = lines.map { $0.trimmingCharacters(in: .whitespaces) }
+
+        if let countInfo = parseXYZCountLine(trimmed[0]) {
+            var nextIndex = 1
+            var commentLine = ""
+
+            if let inlineComment = countInfo.comment, !inlineComment.isEmpty {
+                commentLine = inlineComment
+            } else if lines.count > 1 {
+                let candidate = trimmed[1]
+                if looksLikeAtomRecord(candidate) {
+                    commentLine = ""
+                } else {
+                    commentLine = lines[1]
+                    nextIndex = 2
+                }
+            }
+
+            let atomLines = lines.dropFirst(nextIndex)
+            guard let firstAtom = atomLines.first?.trimmingCharacters(in: .whitespaces),
+                  looksLikeAtomRecord(firstAtom) else {
+                return text
+            }
+
+            var normalized = [String]()
+            normalized.reserveCapacity(atomLines.count + 2)
+            normalized.append(String(countInfo.count))
+            normalized.append(commentLine)
+            normalized.append(contentsOf: atomLines)
+            return normalized.joined(separator: "\n")
         }
-        if !looksLikeAtomRecord(line1) {
-            return text
+
+        if looksLikeAtomRecord(trimmed[0]) {
+            let nonEmptyLines = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            let atomRecordLines = nonEmptyLines.filter { looksLikeAtomRecord($0.trimmingCharacters(in: .whitespaces)) }
+            guard atomRecordLines.count == nonEmptyLines.count else { return text }
+
+            var normalized = [String]()
+            normalized.reserveCapacity(atomRecordLines.count + 2)
+            normalized.append(String(atomRecordLines.count))
+            normalized.append("")
+            normalized.append(contentsOf: nonEmptyLines)
+            return normalized.joined(separator: "\n")
         }
-        var normalized = [String]()
-        normalized.reserveCapacity(lines.count + 1)
-        normalized.append(lines[0])
-        normalized.append("")
-        normalized.append(contentsOf: lines.dropFirst(1))
-        return normalized.joined(separator: "\n")
+
+        return text
+    }
+
+    private func parseXYZCountLine(_ line: String) -> (count: Int, comment: String?)? {
+        let tokens = line.split(whereSeparator: \.isWhitespace)
+        guard let firstToken = tokens.first, let count = Int(firstToken), count > 0 else {
+            return nil
+        }
+        let comment = tokens.dropFirst().joined(separator: " ")
+        return (count, comment.isEmpty ? nil : comment)
     }
 
     private func looksLikeAtomRecord(_ line: String) -> Bool {
