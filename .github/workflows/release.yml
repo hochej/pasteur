@@ -26,4 +26,4 @@ jobs:
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: build/release/Pasteur-macos.zip
+          files: build/release/Pasteur.app.zip
