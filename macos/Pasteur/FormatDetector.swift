@@ -3,7 +3,7 @@ import Foundation
 final class FormatDetector {
     func detectFormat(for text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count < 4 {
+        if trimmed.isEmpty {
             return nil
         }
 
@@ -21,6 +21,10 @@ final class FormatDetector {
 
         if trimmed.contains("M  END") && (trimmed.contains("V2000") || trimmed.contains("V3000")) {
             return "mol"
+        }
+
+        if isLikelySMILES(trimmed) {
+            return "smiles"
         }
 
         if isLikelyPDB(trimmed) {
@@ -96,6 +100,54 @@ final class FormatDetector {
         let tokens = line.split(whereSeparator: \.isWhitespace)
         guard tokens.count >= 4 else { return false }
         return tokens[1...3].allSatisfy { Double($0) != nil }
+    }
+
+    private func isLikelySMILES(_ text: String) -> Bool {
+        // Single line only (not multi-line like PDB/XYZ)
+        let lines = text.split(whereSeparator: \.isNewline)
+        guard lines.count <= 2 else { return false }
+
+        let smiles = String(lines[0]).trimmingCharacters(in: .whitespaces)
+
+        // Length check: SMILES 1-500 chars (allow C, O, N, etc.)
+        guard smiles.count >= 1 && smiles.count <= 500 else { return false }
+
+        // Allowed SMILES character set
+        let smilesCharSet = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@+\\-[]()=#$/\\%.")
+        guard smiles.unicodeScalars.allSatisfy({ smilesCharSet.contains($0) }) else { return false }
+
+        // Must contain at least one organic atom symbol
+        let organicAtoms = ["C", "N", "O", "S", "P", "F", "Cl", "Br", "I", "c", "n", "o", "s", "p"]
+        guard organicAtoms.contains(where: { smiles.contains($0) }) else { return false }
+
+        // Negative filters: exclude XYZ coordinate patterns
+        let tokens = smiles.split(whereSeparator: \.isWhitespace)
+        if tokens.count >= 4 {
+            // Check if looks like "ELEMENT X Y Z" (XYZ format)
+            if tokens[1...3].allSatisfy({ Double($0) != nil }) {
+                return false
+            }
+        }
+
+        // Exclude file paths
+        if smiles.contains("/") || smiles.contains("\\") {
+            return false
+        }
+
+        // Check balanced parentheses and brackets
+        var parenCount = 0
+        var bracketCount = 0
+        for char in smiles {
+            if char == "(" { parenCount += 1 }
+            if char == ")" { parenCount -= 1 }
+            if char == "[" { bracketCount += 1 }
+            if char == "]" { bracketCount -= 1 }
+            if parenCount < 0 || bracketCount < 0 { return false }
+        }
+        guard parenCount == 0 && bracketCount == 0 else { return false }
+
+        Logger.log("[FormatDetector] SMILES detected: '\(smiles)'")
+        return true
     }
 }
 

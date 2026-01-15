@@ -16,6 +16,7 @@ final class ConfigService {
         let screenshotReveal: Bool
         let hotkey: HotkeyConfig
         let debugLogging: Bool
+        let openBabelPath: String
     }
 
     func loadConfig() -> AppConfig {
@@ -28,7 +29,8 @@ final class ConfigService {
                 screenshotDirectory: defaultScreenshotDirectory(),
                 screenshotReveal: false,
                 hotkey: defaultHotkeyConfig(),
-                debugLogging: false
+                debugLogging: false,
+                openBabelPath: defaultOpenBabelPath()
             )
         }
         do {
@@ -40,6 +42,7 @@ final class ConfigService {
             let screenshotReveal = fileConfig.screenshotReveal ?? false
             let hotkey = fileConfig.hotkey ?? defaultHotkeyConfig()
             let debugLogging = fileConfig.debugLogging ?? false
+            let openBabelPath = fileConfig.openBabelPath ?? defaultOpenBabelPath()
             return AppConfig(
                 ui: ui,
                 popover: popover,
@@ -47,7 +50,8 @@ final class ConfigService {
                 screenshotDirectory: screenshotDir,
                 screenshotReveal: screenshotReveal,
                 hotkey: hotkey,
-                debugLogging: debugLogging
+                debugLogging: debugLogging,
+                openBabelPath: openBabelPath
             )
         } catch {
             Logger.log("[Pasteur] Failed to parse config at \(url.path): \(error)")
@@ -58,7 +62,8 @@ final class ConfigService {
                 screenshotDirectory: defaultScreenshotDirectory(),
                 screenshotReveal: false,
                 hotkey: defaultHotkeyConfig(),
-                debugLogging: false
+                debugLogging: false,
+                openBabelPath: defaultOpenBabelPath()
             )
         }
     }
@@ -75,7 +80,8 @@ final class ConfigService {
             screenshotDirectory: pathForConfig(config.screenshotDirectory),
             screenshotReveal: config.screenshotReveal,
             hotkey: config.hotkey,
-            debugLogging: config.debugLogging
+            debugLogging: config.debugLogging,
+            openBabelPath: config.openBabelPath
         )
 
         do {
@@ -130,6 +136,10 @@ final class ConfigService {
         HotkeyConfig(shortcut: "ctrl+opt+cmd+m")
     }
 
+    private func defaultOpenBabelPath() -> String {
+        "/opt/homebrew/bin/obabel"
+    }
+
     private func defaultScreenshotDirectory() -> URL {
         FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
             ?? fileManager.homeDirectoryForCurrentUser
@@ -174,5 +184,6 @@ final class ConfigService {
         let screenshotReveal: Bool?
         let hotkey: HotkeyConfig?
         let debugLogging: Bool?
+        let openBabelPath: String?
     }
 }
