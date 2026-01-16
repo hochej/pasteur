@@ -15,6 +15,7 @@ final class ClipboardMonitor {
         self.minimumIntervalMs = max(0, minimumIntervalMs)
         self.handler = handler
         self.lastChangeCount = pasteboard.changeCount
+        self.lastText = pasteboard.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func start() {

@@ -15,6 +15,7 @@ final class ViewerPanelController: NSObject {
     private var screenshotReveal = false
     private var didPrewarm = false
     private var popoverConfig = ConfigService.PopoverConfig(width: 720, height: 520)
+    private var smilesConverter: SmilesConverter?
 
     override init() {
         Logger.log("[Pasteur] ViewerPanelController init start.")
@@ -58,6 +59,10 @@ final class ViewerPanelController: NSObject {
         webContentController.add(bridge, name: WebViewBridge.channelName)
         loadWebViewer()
         Logger.log("[Pasteur] ViewerPanelController init complete.")
+    }
+
+    var isVisible: Bool {
+        return panel.isVisible
     }
 
     func setAnchorButton(_ button: NSStatusBarButton?) {
@@ -114,6 +119,45 @@ final class ViewerPanelController: NSObject {
         webView.layer?.backgroundColor = NSColor.clear.cgColor
         applyPanelAlphaIfNeeded()
         Logger.log("[Pasteur] Applied panel alpha=\(clamped)")
+    }
+
+    func applyOpenBabelPath(_ path: String) {
+        if smilesConverter == nil {
+            smilesConverter = SmilesConverter(openBabelPath: path)
+            Logger.log("[Pasteur] SmilesConverter initialized with path: \(path)")
+        } else {
+            smilesConverter?.updateOpenBabelPath(path)
+            Logger.log("[Pasteur] SmilesConverter path updated: \(path)")
+        }
+    }
+
+    func loadSMILES(_ smiles: String) {
+        guard let converter = smilesConverter else {
+            Logger.log("[Pasteur] OpenBabel not configured")
+            NotificationService.shared.send(message: "OpenBabel not configured. Set path in Preferences.")
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                Logger.log("[Pasteur] Converting SMILES to XYZ...")
+                let xyzData = try await converter.convertToXYZ(smiles)
+                Logger.log("[Pasteur] SMILES conversion successful")
+                let request = WebViewBridge.LoadRequest(
+                    id: UUID().uuidString,
+                    format: "xyz",
+                    data: xyzData,
+                    options: ["sourceFormat": "smiles"]
+                )
+                bridge.sendLoad(request)
+            } catch let error as SmilesConversionError {
+                Logger.log("[Pasteur] SMILES conversion failed: \(error.localizedDescription)")
+                NotificationService.shared.send(message: error.localizedDescription)
+            } catch {
+                Logger.log("[Pasteur] SMILES conversion error: \(error)")
+                NotificationService.shared.send(message: "Failed to convert SMILES.")
+            }
+        }
     }
 
     private func loadWebViewer() {

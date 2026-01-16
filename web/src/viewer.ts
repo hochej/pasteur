@@ -13,14 +13,11 @@ export async function initViewer(): Promise<Viewer> {
     layoutShowSequence: false,
     layoutShowLog: false,
     layoutShowLeftPanel: false,
-    layoutShowRightPanel: false,
-    layoutShowMainMenu: false,
-    viewportShowExpand: false
+    viewportShowExpand: false,
   });
 
   viewer.plugin.canvas3d?.setProps({
     transparentBackground: false,
-    backgroundColor: Color(0x10161d)
   });
 
   return viewer;

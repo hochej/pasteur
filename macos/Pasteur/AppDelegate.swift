@@ -38,40 +38,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             controller.applyPopoverConfig(config.popover)
             controller.applyScreenshotDirectory(config.screenshotDirectory)
             controller.applyScreenshotReveal(config.screenshotReveal)
+            controller.applyOpenBabelPath(config.openBabelPath)
             controller.setAnchorButton(self?.statusItemController?.button)
             Logger.log("[Pasteur] Viewer panel ready.")
 
-            let clipboardConfig = config.clipboardMonitor
-            if clipboardConfig.enabled {
-                Logger.log("[Pasteur] Clipboard monitor enabled poll=\(clipboardConfig.pollIntervalMs)ms autoShow=\(clipboardConfig.autoShow)")
-                let monitor = ClipboardMonitor(pollIntervalMs: clipboardConfig.pollIntervalMs) { [weak self] text in
-                    guard let self else { return }
-                    if text.utf8.count > 5_000_000 {
-                        Logger.log("[Pasteur] Clipboard skipped (>5MB).")
-                        return
-                    }
-                    guard let format = self.formatDetector.detectFormat(for: text) else { return }
-                    let payload = format == "xyz" ? self.normalizeXYZ(text) : text
-                    Logger.log("[Pasteur] Clipboard match format=\(format) bytes=\(text.utf8.count)")
-                    DispatchQueue.main.async {
-                        if clipboardConfig.autoShow {
-                            self.viewerPanelController?.show()
-                            self.viewerPanelController?.load(format: format, data: payload)
-                        }
-                    }
-                }
-                self?.clipboardMonitor = monitor
-                monitor.start()
+            if config.clipboardMonitor.enabled {
+                Logger.log("[Pasteur] Clipboard monitor enabled poll=\(config.clipboardMonitor.pollIntervalMs)ms autoShow=\(config.clipboardMonitor.autoShow)")
+                self?.applyClipboardMonitor(config: config)
             }
         }
 
-        if config.clipboardMonitor.enabled, let text = clipboardService.readString() {
+        if config.clipboardMonitor.enabled, config.clipboardMonitor.autoShow, let text = clipboardService.readString() {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let format = formatDetector.detectFormat(for: trimmed), config.clipboardMonitor.autoShow {
-                let payload = format == "xyz" ? normalizeXYZ(text) : text
+
+            // Check for file path
+            if isFilePath(trimmed), let fileContents = readFile(atPath: trimmed) {
+                if let format = formatDetector.detectFormat(for: fileContents) {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.visualizeContent(fileContents, format: format)
+                    }
+                }
+            } else if let format = formatDetector.detectFormat(for: trimmed) {
                 DispatchQueue.main.async { [weak self] in
-                    self?.viewerPanelController?.show()
-                    self?.viewerPanelController?.load(format: format, data: payload)
+                    self?.visualizeContent(trimmed, format: format, rawText: text)
                 }
             }
         }
@@ -80,6 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleVisualizeClipboard() {
+        // Check if panel is already visible - if so, just toggle it off
+        if viewerPanelController?.isVisible == true {
+            viewerPanelController?.hide()
+            return
+        }
+
         guard let rawText = clipboardService.readString(),
               !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             showToast(message: "Clipboard is empty.")
@@ -92,19 +87,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Check if it's a file path
+        if isFilePath(trimmed) {
+            if let fileContents = readFile(atPath: trimmed) {
+                guard let format = formatDetector.detectFormat(for: fileContents) else {
+                    showToast(message: "File doesn't contain a supported molecule format.")
+                    return
+                }
+                visualizeContent(fileContents, format: format)
+            } else {
+                showToast(message: "Could not read file.")
+            }
+            return
+        }
+
+        // Existing clipboard content handling
         guard let format = formatDetector.detectFormat(for: trimmed) else {
             showToast(message: "Clipboard doesn't look like a supported molecule format.")
             return
         }
 
-        let payload = format == "xyz" ? normalizeXYZ(rawText) : rawText
-
-        viewerPanelController?.show()
-        viewerPanelController?.load(format: format, data: payload)
+        visualizeContent(trimmed, format: format, rawText: rawText)
     }
 
     @objc private func handleQuit() {
         NSApp.terminate(nil)
+    }
+
+    private func isFilePath(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasPrefix("/") || trimmed.hasPrefix("~") || trimmed.hasPrefix("file://")
+    }
+
+    private func readFile(atPath path: String) -> String? {
+        var filePath = path
+
+        if filePath.hasPrefix("file://") {
+            filePath = String(filePath.dropFirst(7))
+        }
+
+        if filePath.hasPrefix("~") {
+            filePath = (filePath as NSString).expandingTildeInPath
+        }
+
+        guard FileManager.default.fileExists(atPath: filePath) else {
+            Logger.log("[Pasteur] File not found: \(filePath)")
+            return nil
+        }
+
+        do {
+            let contents = try String(contentsOfFile: filePath, encoding: .utf8)
+            Logger.log("[Pasteur] Loaded file: \(filePath) (\(contents.count) chars)")
+            return contents
+        } catch {
+            Logger.log("[Pasteur] Error reading file: \(error)")
+            return nil
+        }
+    }
+
+    private func visualizeContent(_ content: String, format: String, rawText: String? = nil) {
+        viewerPanelController?.show()
+        if format == "smiles" {
+            viewerPanelController?.loadSMILES(content.trimmingCharacters(in: .whitespacesAndNewlines))
+        } else {
+            let payload = format == "xyz" ? normalizeXYZ(rawText ?? content) : content
+            viewerPanelController?.load(format: format, data: payload)
+        }
     }
 
     @objc private func handlePreferences() {
@@ -142,24 +191,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewerPanelController?.applyPopoverConfig(config.popover)
         viewerPanelController?.applyScreenshotDirectory(config.screenshotDirectory)
         viewerPanelController?.applyScreenshotReveal(config.screenshotReveal)
+        viewerPanelController?.applyOpenBabelPath(config.openBabelPath)
         configureHotkey(using: config.hotkey)
 
+        applyClipboardMonitor(config: config)
+    }
+
+    private func applyClipboardMonitor(config: ConfigService.AppConfig) {
         clipboardMonitor?.stop()
         clipboardMonitor = nil
-        if config.clipboardMonitor.enabled {
-            let monitor = ClipboardMonitor(pollIntervalMs: config.clipboardMonitor.pollIntervalMs) { [weak self] text in
-                guard let self else { return }
-                if text.utf8.count > 5_000_000 { return }
-                guard let format = self.formatDetector.detectFormat(for: text) else { return }
-                let payload = format == "xyz" ? self.normalizeXYZ(text) : text
-                if config.clipboardMonitor.autoShow {
-                    self.viewerPanelController?.show()
-                    self.viewerPanelController?.load(format: format, data: payload)
+        guard config.clipboardMonitor.enabled else { return }
+
+        let monitor = ClipboardMonitor(pollIntervalMs: config.clipboardMonitor.pollIntervalMs) { [weak self] text in
+            guard let self, config.clipboardMonitor.autoShow else { return }
+            if text.utf8.count > 5_000_000 { return }
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // Check for file path first
+            if self.isFilePath(trimmed), let fileContents = self.readFile(atPath: trimmed) {
+                if let format = self.formatDetector.detectFormat(for: fileContents) {
+                    self.visualizeContent(fileContents, format: format)
                 }
+                return
             }
-            clipboardMonitor = monitor
-            monitor.start()
+
+            // Existing content handling
+            if let format = self.formatDetector.detectFormat(for: trimmed) {
+                self.visualizeContent(trimmed, format: format, rawText: text)
+            }
         }
+        clipboardMonitor = monitor
+        monitor.start()
     }
 
     private func normalizeXYZ(_ text: String) -> String {

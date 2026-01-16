@@ -9,6 +9,7 @@ final class PreferencesController: NSObject {
     private let screenshotRevealCheckbox = NSButton(checkboxWithTitle: "Reveal screenshots in Finder", target: nil, action: nil)
     private let debugLoggingCheckbox = NSButton(checkboxWithTitle: "Enable debug logging", target: nil, action: nil)
     private let opacitySlider = NSSlider()
+    private let openBabelPathField = NSTextField()
     private let onSave: (ConfigService.AppConfig) -> Void
     private var baseConfig: ConfigService.AppConfig
 
@@ -17,7 +18,7 @@ final class PreferencesController: NSObject {
         self.onSave = onSave
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 290),
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 320),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -46,9 +47,16 @@ final class PreferencesController: NSObject {
         stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
 
+        // Configure OpenBabel path field
+        openBabelPathField.usesSingleLineMode = true
+        openBabelPathField.lineBreakMode = .byTruncatingHead
+        openBabelPathField.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+        openBabelPathField.placeholderString = "/opt/homebrew/bin/obabel"
+
         let hotkeyRow = labeledRow(title: "Hotkey", field: hotkeyField)
-        let pollRow = labeledRow(title: "Poll interval (ms)", field: pollIntervalField)
-        let opacityRow = labeledSliderRow(title: "Panel opacity", slider: opacitySlider, minValue: 0.2, maxValue: 1.0)
+        let pollRow = labeledRow(title: "Poll Interval (ms)", field: pollIntervalField)
+        let opacityRow = labeledSliderRow(title: "Panel Opacity", slider: opacitySlider, minValue: 0.2, maxValue: 1.0)
+        let openBabelRow = labeledRow(title: "OpenBabel Path", field: openBabelPathField)
 
         let buttonRow = NSStackView(views: [clipboardEnabledCheckbox, autoShowCheckbox])
         buttonRow.orientation = .horizontal
@@ -72,6 +80,7 @@ final class PreferencesController: NSObject {
 
         stack.addArrangedSubview(hotkeyRow)
         stack.addArrangedSubview(opacityRow)
+        stack.addArrangedSubview(openBabelRow)
         stack.addArrangedSubview(buttonRow)
         stack.addArrangedSubview(pollRow)
         stack.addArrangedSubview(footerRow)
@@ -91,7 +100,11 @@ final class PreferencesController: NSObject {
         label.font = .systemFont(ofSize: 12, weight: .medium)
         label.textColor = .secondaryLabelColor
         label.setContentHuggingPriority(.required, for: .horizontal)
-        field.placeholderString = title
+
+        // Only set placeholder if not already configured
+        if field.placeholderString == nil || field.placeholderString?.isEmpty == true {
+            field.placeholderString = title
+        }
 
         let row = NSStackView(views: [label, field])
         row.orientation = .horizontal
@@ -142,6 +155,7 @@ final class PreferencesController: NSObject {
            let valueLabel = superview.arrangedSubviews.last as? NSTextField {
             valueLabel.stringValue = String(format: "%.0f%%", config.ui.panelAlpha * 100)
         }
+        openBabelPathField.stringValue = config.openBabelPath
     }
 
     @objc private func handleCancel() {
@@ -164,6 +178,7 @@ final class PreferencesController: NSObject {
         let screenshotReveal = screenshotRevealCheckbox.state == .on
         let debugLogging = debugLoggingCheckbox.state == .on
         let panelAlpha = opacitySlider.doubleValue
+        let openBabelPath = openBabelPathField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let clipboardConfig = ConfigService.ClipboardMonitorConfig(
             enabled: clipboardEnabled,
@@ -188,7 +203,8 @@ final class PreferencesController: NSObject {
             screenshotDirectory: baseConfig.screenshotDirectory,
             screenshotReveal: screenshotReveal,
             hotkey: hotkeyConfig,
-            debugLogging: debugLogging
+            debugLogging: debugLogging,
+            openBabelPath: openBabelPath.isEmpty ? baseConfig.openBabelPath : openBabelPath
         )
 
         baseConfig = updated
