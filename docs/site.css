@@ -2,6 +2,7 @@
   color-scheme: dark;
   --bg: #08070c;
   --bg-soft: #14111f;
+  --viewer-bg: #08070c;
   --panel: rgba(19, 16, 27, 0.8);
   --panel-solid: #100d17;
   --ink: #f7f1ea;
@@ -14,9 +15,48 @@
   --shadow: 0 32px 90px rgba(4, 3, 10, 0.7);
   --radius: 24px;
   --radius-sm: 16px;
-  --font-display: "Bodoni Moda", "Didot", serif;
-  --font-body: "Source Serif 4", "Georgia", serif;
+
+  --font-display: "IBM Plex Serif", "Iowan Old Style", "Palatino Linotype", serif;
+  --font-body: "IBM Plex Serif", "Iowan Old Style", "Palatino Linotype", serif;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "Menlo", monospace;
+
+  /* CMYK halftone overlay (dark theme tuning) */
+  --cmyk-c: rgba(0, 209, 255, 0.18);
+  --cmyk-m: rgba(255, 64, 191, 0.14);
+  --cmyk-y: rgba(255, 214, 70, 0.12);
+  --cmyk-k: rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="paper"] {
+  color-scheme: light;
+
+  --bg: #f5efe4;
+  --bg-soft: #efe5d6;
+  --viewer-bg: #08070c;
+  --panel: rgba(255, 250, 240, 0.74);
+  --panel-solid: #fffaf0;
+
+  --ink: #1f1a14;
+  --ink-muted: rgba(31, 26, 20, 0.64);
+  --line: rgba(31, 26, 20, 0.16);
+
+  /* warmer accents on paper */
+  --accent: #a66b1e;
+  --accent-2: #0aa8a2;
+  --accent-3: #c2552f;
+  --accent-4: #5b52c8;
+
+  /* journal mode: slightly squarer + flatter */
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 18px 45px rgba(31, 26, 20, 0.14);
+
+  /* CMYK overlay tuned for paper (subtle) */
+  --cmyk-c: rgba(0, 170, 255, 0.18);
+  --cmyk-m: rgba(255, 60, 170, 0.14);
+  --cmyk-y: rgba(255, 200, 0, 0.1);
+  --cmyk-k: rgba(20, 14, 10, 0.08);
 }
 
 * {
@@ -42,6 +82,7 @@ body {
     radial-gradient(640px 520px at 50% 115%, rgba(155, 135, 245, 0.2), transparent 65%),
     linear-gradient(180deg, #07060b 0%, #0c0b15 55%, #08070c 100%);
   position: relative;
+  z-index: 0;
   overflow-x: hidden;
   text-rendering: optimizeLegibility;
 }
@@ -56,7 +97,7 @@ body::before {
   background-size: 160px 160px;
   opacity: 0.24;
   pointer-events: none;
-  z-index: 0;
+  z-index: -2;
 }
 
 body::after {
@@ -67,7 +108,74 @@ body::after {
   mix-blend-mode: soft-light;
   opacity: 0.2;
   pointer-events: none;
+  z-index: -1;
+}
+
+.cmyk-print {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   z-index: 0;
+  opacity: 0.28;
+  mix-blend-mode: screen;
+}
+
+.cmyk-print .screen {
+  position: absolute;
+  inset: -25%;
+  background-size: 7px 7px;
+  background-image: radial-gradient(circle, currentColor 0 1.1px, transparent 1.2px);
+  transform-origin: 50% 50%;
+  filter: blur(0.1px) contrast(1.25);
+}
+
+.cmyk-print .c {
+  color: var(--cmyk-c);
+  transform: rotate(15deg);
+}
+
+.cmyk-print .m {
+  color: var(--cmyk-m);
+  transform: rotate(45deg);
+}
+
+.cmyk-print .y {
+  color: var(--cmyk-y);
+  transform: rotate(75deg);
+}
+
+.cmyk-print .k {
+  color: var(--cmyk-k);
+  background-size: 9px 9px;
+  transform: rotate(0deg);
+  opacity: 0.85;
+  mix-blend-mode: soft-light;
+}
+
+:root[data-theme="paper"] .cmyk-print {
+  opacity: 0.11;
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme="paper"] .cmyk-print .screen {
+  background-size: 11px 11px;
+  filter: blur(0px) contrast(1.22);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cmyk-print .screen {
+    animation: misreg 26s ease-in-out infinite;
+  }
+
+  @keyframes misreg {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0.7px -0.5px;
+    }
+  }
 }
 
 ::selection {
@@ -163,15 +271,16 @@ code {
 .title {
   font-family: var(--font-display);
   font-size: 26px;
-  letter-spacing: 0.6px;
+  letter-spacing: -0.01em;
   font-weight: 600;
 }
 
 .tagline {
+  font-family: var(--font-ui);
   font-size: 12px;
+  font-weight: 500;
   color: var(--ink-muted);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.18px;
 }
 
 .links {
@@ -188,10 +297,10 @@ code {
   box-shadow: 0 12px 26px rgba(4, 3, 10, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
   white-space: nowrap;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 12px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.18px;
   color: var(--ink);
 }
 
@@ -279,9 +388,9 @@ code {
   border-radius: 999px;
   border: 1px solid rgba(215, 179, 106, 0.3);
   font-size: 11px;
-  letter-spacing: 0.6px;
-  font-family: var(--font-display);
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-family: var(--font-ui);
+  font-weight: 600;
   color: rgba(247, 241, 234, 0.9);
   background: linear-gradient(140deg, rgba(20, 16, 25, 0.85), rgba(10, 9, 15, 0.75));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
@@ -291,8 +400,9 @@ code {
   margin: 0 0 12px;
   font-family: var(--font-display);
   font-size: 46px;
-  line-height: 1.05;
-  letter-spacing: 0.3px;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  font-weight: 600;
   text-shadow: 0 12px 28px rgba(3, 2, 8, 0.6);
 }
 
@@ -314,10 +424,9 @@ code {
   align-items: center;
   gap: 6px;
   margin-top: 18px;
-  font-family: var(--font-display);
-  letter-spacing: 0.5px;
+  font-family: var(--font-ui);
+  letter-spacing: 0.22px;
   font-size: 12px;
-  text-transform: uppercase;
 }
 
 .key {
@@ -393,10 +502,10 @@ code {
 }
 
 .specimen-title {
-  font-family: var(--font-display);
-  letter-spacing: 0.6px;
+  font-family: var(--font-ui);
+  letter-spacing: 0.28px;
   font-size: 12px;
-  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .pill {
@@ -404,10 +513,10 @@ code {
   border-radius: 999px;
   background: rgba(110, 231, 208, 0.16);
   border: 1px solid rgba(110, 231, 208, 0.5);
-  font-size: 10px;
-  font-family: var(--font-display);
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.18px;
 }
 
 .specimen-body {
@@ -432,7 +541,7 @@ code {
   border-radius: calc(var(--radius-sm) - 6px);
   overflow: hidden;
   border: 1px solid rgba(247, 241, 234, 0.1);
-  background: var(--bg);
+  background: var(--viewer-bg);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
@@ -444,15 +553,15 @@ code {
 }
 
 #molstar-viewer {
-  background: var(--bg);
+  background: var(--viewer-bg);
 }
 
 #molstar-viewer .msp-plugin {
-  background: var(--bg);
+  background: var(--viewer-bg);
 }
 
 #molstar-viewer canvas {
-  background: var(--bg);
+  background: var(--viewer-bg);
   display: block;
 }
 
@@ -504,10 +613,10 @@ code {
   align-items: center;
   padding: 6px 12px;
   border-radius: 999px;
-  font-family: var(--font-display);
-  font-size: 10px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18px;
   border: 1px solid rgba(247, 241, 234, 0.2);
   background: rgba(10, 9, 15, 0.75);
   color: var(--ink);
@@ -544,9 +653,8 @@ code {
   flex-basis: 100%;
   color: var(--ink-muted);
   font-size: 12px;
-  font-family: var(--font-display);
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  font-family: var(--font-ui);
+  letter-spacing: 0.18px;
 }
 
 .btn.compact {
@@ -660,10 +768,10 @@ code {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  font-size: 11px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.18px;
+  font-size: 12px;
 }
 
 .stat-value {
@@ -683,7 +791,8 @@ code {
   margin: 0;
   font-family: var(--font-display);
   font-size: 32px;
-  letter-spacing: 0.4px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .section-title p {
@@ -752,10 +861,10 @@ code {
 
 .card h3 {
   margin: 0 0 8px;
-  font-family: var(--font-display);
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18px;
 }
 
 .card p {
@@ -787,10 +896,10 @@ code {
   border-radius: 999px;
   border: 1px solid rgba(215, 179, 106, 0.45);
   color: var(--accent);
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 11px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.18px;
+  font-size: 12px;
   margin-bottom: 10px;
   background: rgba(215, 179, 106, 0.08);
 }
@@ -907,6 +1016,164 @@ code {
     transform: translateY(6px) scale(1.02);
     opacity: 0.95;
   }
+}
+
+/* -----------------------------
+   Paper mode overrides (journal / lab report)
+   ----------------------------- */
+
+:root[data-theme="paper"] body {
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background:
+    radial-gradient(1200px 760px at 10% -10%, rgba(215, 179, 106, 0.14), transparent 60%),
+    radial-gradient(980px 720px at 92% 0%, rgba(110, 231, 208, 0.06), transparent 62%),
+    radial-gradient(760px 640px at 50% 112%, rgba(155, 135, 245, 0.06), transparent 65%),
+    linear-gradient(180deg, #fffaf0 0%, #f5efe4 55%, #efe5d6 100%);
+}
+
+:root[data-theme="paper"] body::before {
+  background-image:
+    linear-gradient(90deg, rgba(31, 26, 20, 0.07) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(31, 26, 20, 0.06) 1px, transparent 1px);
+  opacity: 0.06;
+}
+
+:root[data-theme="paper"] body::after {
+  mix-blend-mode: multiply;
+  opacity: 0.07;
+}
+
+:root[data-theme="paper"] ::selection {
+  background: rgba(166, 107, 30, 0.22);
+  color: #1f1a14;
+}
+
+:root[data-theme="paper"] .hero {
+  border-color: var(--line);
+  background: rgba(255, 250, 240, 0.78);
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+}
+
+:root[data-theme="paper"] .hero::before {
+  opacity: 0.16;
+  animation: none;
+}
+
+:root[data-theme="paper"] .hero::after {
+  opacity: 0.12;
+}
+
+:root[data-theme="paper"] .copy h1 {
+  text-shadow: 0 14px 30px rgba(31, 26, 20, 0.12);
+}
+
+:root[data-theme="paper"] .mark::after {
+  opacity: 0;
+}
+
+:root[data-theme="paper"] .mark {
+  box-shadow: 0 10px 24px rgba(31, 26, 20, 0.18);
+}
+
+:root[data-theme="paper"] .badge {
+  border-color: rgba(31, 26, 20, 0.16);
+  color: rgba(31, 26, 20, 0.84);
+  background: rgba(255, 250, 240, 0.78);
+}
+
+:root[data-theme="paper"] .tagline {
+  color: rgba(31, 26, 20, 0.6);
+}
+
+/* less "pills", more journal labels */
+:root[data-theme="paper"] .btn,
+:root[data-theme="paper"] .badge,
+:root[data-theme="paper"] .pill,
+:root[data-theme="paper"] .format-tag,
+:root[data-theme="paper"] .viewer-status {
+  border-radius: 12px;
+}
+
+:root[data-theme="paper"] .key {
+  border-color: rgba(31, 26, 20, 0.24);
+  background: rgba(255, 250, 240, 0.92);
+  box-shadow: none;
+}
+
+:root[data-theme="paper"] .btn {
+  border-color: rgba(31, 26, 20, 0.22);
+  background: rgba(255, 250, 240, 0.86);
+  box-shadow: 0 10px 18px rgba(31, 26, 20, 0.08);
+}
+
+:root[data-theme="paper"] .btn:hover {
+  border-color: rgba(166, 107, 30, 0.45);
+  box-shadow: 0 14px 24px rgba(31, 26, 20, 0.12);
+  transform: none;
+}
+
+:root[data-theme="paper"] .btn.primary {
+  border-color: rgba(31, 26, 20, 0.82);
+  background: rgba(31, 26, 20, 0.88);
+  color: rgba(255, 250, 240, 0.97);
+  box-shadow: none;
+}
+
+:root[data-theme="paper"] .btn.primary:hover {
+  border-color: rgba(31, 26, 20, 0.78);
+  background: rgba(31, 26, 20, 0.82);
+  color: rgba(255, 250, 240, 0.98);
+}
+
+/* header CTA should be less sales-y: outlined instead of ink-filled */
+:root[data-theme="paper"] .top .links .btn.primary {
+  background: transparent;
+  color: var(--ink);
+  border-color: rgba(31, 26, 20, 0.32);
+  box-shadow: none;
+}
+
+:root[data-theme="paper"] .top .links .btn.primary:hover {
+  background: rgba(31, 26, 20, 0.06);
+  border-color: rgba(31, 26, 20, 0.42);
+}
+
+:root[data-theme="paper"] .btn.ghost {
+  background: transparent;
+  border-color: rgba(31, 26, 20, 0.26);
+  box-shadow: none;
+}
+
+:root[data-theme="paper"] .specimen {
+  border-color: rgba(31, 26, 20, 0.18);
+  background: rgba(255, 250, 240, 0.82);
+  box-shadow: 0 22px 55px rgba(31, 26, 20, 0.14);
+}
+
+:root[data-theme="paper"] .specimen::after {
+  opacity: 0.08;
+}
+
+:root[data-theme="paper"] .specimen-body {
+  border-color: rgba(31, 26, 20, 0.18);
+  background: rgba(255, 250, 240, 0.74);
+}
+
+:root[data-theme="paper"] .steps,
+:root[data-theme="paper"] .step,
+:root[data-theme="paper"] .card,
+:root[data-theme="paper"] .format {
+  border-color: rgba(31, 26, 20, 0.16);
+  background: rgba(255, 250, 240, 0.72);
+}
+
+:root[data-theme="paper"] .cta-panel {
+  border-color: rgba(31, 26, 20, 0.16);
+  background: rgba(255, 250, 240, 0.76);
 }
 
 @media (prefers-reduced-motion: reduce) {

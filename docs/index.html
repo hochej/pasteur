@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="paper">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,7 +8,7 @@
       name="description"
       content="Pasteur is a macOS menu bar app that turns clipboard molecules into a floating 3D viewer in a single hotkey."
     />
-    <meta name="theme-color" content="#08070c" />
+    <meta name="theme-color" content="#f5efe4" />
     <link rel="canonical" href="https://pasteur.bar/" />
     <meta property="og:title" content="Pasteur" />
     <meta
@@ -23,15 +23,22 @@
     <link rel="icon" href="./icon.png" type="image/png" />
     <link rel="apple-touch-icon" href="./icon.png" />
     <link rel="stylesheet" href="./molstar/molstar.css" />
-    <link rel="stylesheet" href="./site.css?v=20260114" />
+    <link rel="stylesheet" href="./site.css?v=20260206-9" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..900&family=Source+Serif+4:opsz,wght@8..60,300..700&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
+    <div class="cmyk-print" aria-hidden="true">
+      <div class="screen c"></div>
+      <div class="screen m"></div>
+      <div class="screen y"></div>
+      <div class="screen k"></div>
+    </div>
+
     <main class="wrap">
       <header class="top" data-animate="1">
         <a class="brand" href="https://pasteur.bar/" aria-label="Pasteur home">
@@ -44,7 +51,7 @@
           </span>
         </a>
         <nav class="links" aria-label="Links">
-          <a class="btn primary" href="https://github.com/hochej/pasteur/releases/download/v0.1.0/Pasteur.app.zip">Download</a>
+          <a class="btn primary" href="https://github.com/hochej/pasteur/releases/latest/download/Pasteur.app.zip">Download</a>
           <a class="btn ghost" href="https://github.com/hochej/pasteur">Source</a>
         </nav>
       </header>
@@ -59,7 +66,7 @@
           <h1>Clipboard to molecule, instantly.</h1>
           <p>Copy a molecular file, hit a hotkey, see it rendered. Or let Pasteur watch your clipboard and render automatically. No X11. No file transfers.</p>
           <div class="cta">
-            <a class="btn primary" href="https://github.com/hochej/pasteur/releases/download/v0.1.0/Pasteur.app.zip">Get Pasteur</a>
+            <a class="btn primary" href="https://github.com/hochej/pasteur/releases/latest/download/Pasteur.app.zip">Get Pasteur</a>
             <a class="btn" href="https://github.com/hochej/pasteur">View source</a>
           </div>
           <div class="keyline" aria-label="Default hotkey example">
@@ -95,6 +102,83 @@
             </div>
             <div class="viewer-hint" id="viewer-hint">Paste PDB, mmCIF, SDF, MOL2, MOL, or XYZ.</div>
           </div>
+        </div>
+      </section>
+
+      <section class="steps" aria-label="How it works" data-reveal>
+        <div class="section-title" data-reveal>
+          <h2>Built for fast clipboard workflows.</h2>
+          <p>Pasteur stays out of your way until you need it—then it renders instantly.</p>
+        </div>
+
+        <div class="step-grid" aria-label="Workflow steps">
+          <div class="step" data-reveal>
+            <div class="step-index">01</div>
+            <h3>Copy</h3>
+            <p>Copy a PDB, mmCIF, SDF/MOL, MOL2, or XYZ from anywhere—browser, paper, terminal.</p>
+          </div>
+          <div class="step" data-reveal>
+            <div class="step-index">02</div>
+            <h3>Hotkey</h3>
+            <p>Hit the global shortcut. Pasteur reads the clipboard (or watches it, if you opt in).</p>
+          </div>
+          <div class="step" data-reveal>
+            <div class="step-index">03</div>
+            <h3>Render</h3>
+            <p>A floating viewer appears instantly. The Mol* engine is preloaded for sub-second reveals.</p>
+          </div>
+        </div>
+
+        <div class="features" aria-label="Why it feels fast">
+          <div class="card" data-reveal>
+            <h3>Always ready</h3>
+            <p>The viewer panel is prewarmed on launch—no slow boot when inspiration hits.</p>
+          </div>
+          <div class="card" data-reveal>
+            <h3>Privacy-first</h3>
+            <p>No servers. Clipboard reads happen only on explicit action (or optional watching).</p>
+          </div>
+          <div class="card" data-reveal>
+            <h3>Menu bar native</h3>
+            <p>No Dock icon. No X11. Just a lightweight tool that behaves like macOS.</p>
+          </div>
+        </div>
+
+        <div class="formats" aria-label="Supported formats">
+          <div class="section-title" data-reveal>
+            <h2>Formats Pasteur understands.</h2>
+            <p>Pasteur auto-detects the structure format and loads it without you thinking about it.</p>
+          </div>
+
+          <div class="format-grid">
+            <div class="format" data-reveal>
+              <div class="format-tag">PDB / mmCIF</div>
+              <p>Macromolecules, proteins, ligands—great for quick inspection and validation.</p>
+            </div>
+            <div class="format" data-reveal>
+              <div class="format-tag">SDF / MOL / MOL2</div>
+              <p>Small molecules and chemistry formats, straight from tool output or databases.</p>
+            </div>
+            <div class="format" data-reveal>
+              <div class="format-tag">XYZ</div>
+              <p>Simple coordinates, ideal for quick tests, examples, and generated structures.</p>
+            </div>
+            <div class="format" data-reveal>
+              <div class="format-tag">More coming</div>
+              <p>SMILES/RDKit WASM is on the roadmap. Keep your workflows local and fast.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-panel" aria-label="Download" data-reveal>
+        <div>
+          <h2>Ready to try it?</h2>
+          <p>Download the macOS app, or inspect the source code on GitHub.</p>
+        </div>
+        <div class="cta-actions">
+          <a class="btn primary" href="https://github.com/hochej/pasteur/releases/latest/download/Pasteur.app.zip">Download</a>
+          <a class="btn ghost" href="https://github.com/hochej/pasteur">Source</a>
         </div>
       </section>
 
