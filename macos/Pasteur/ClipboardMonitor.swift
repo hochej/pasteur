@@ -20,9 +20,15 @@ final class ClipboardMonitor {
 
     func start() {
         stop()
-        timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(pollIntervalMs) / 1000.0, repeats: true) { [weak self] _ in
+
+        // Use a timer attached to the main run loop in .common modes so it continues
+        // firing while the user is interacting with menus/panels.
+        let t = Timer(timeInterval: TimeInterval(pollIntervalMs) / 1000.0, repeats: true) { [weak self] _ in
             self?.poll()
         }
+        t.tolerance = 0.05
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     func stop() {

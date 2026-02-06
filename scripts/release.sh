@@ -42,6 +42,7 @@ if [[ -z "$app_version" ]]; then
 fi
 
 bundle_id="${BUNDLE_ID:-bar.pasteur.Pasteur}"
+icon_source_png="${ICON_PNG:-$root_dir/docs/icon.png}"
 
 if [[ "$require_signing" == "1" ]]; then
   if [[ -z "$sign_identity" || "$sign_identity" == "-" ]]; then
@@ -134,11 +135,37 @@ else
   <string>$app_version</string>
   <key>CFBundleVersion</key>
   <string>$app_version</string>
+  <key>CFBundleIconFile</key>
+  <string>Pasteur</string>
   <key>NSHighResolutionCapable</key>
   <true/>
 </dict>
 </plist>
 EOF
+
+  # Generate app icon (.icns) from a 1024x1024 PNG.
+  if [[ -f "$icon_source_png" ]]; then
+    log "Generating app icon from $icon_source_png"
+    iconset_dir="$release_dir/icon.iconset"
+    rm -rf "$iconset_dir"
+    mkdir -p "$iconset_dir"
+
+    sips -z 16 16     "$icon_source_png" --out "$iconset_dir/icon_16x16.png" >/dev/null
+    sips -z 32 32     "$icon_source_png" --out "$iconset_dir/icon_16x16@2x.png" >/dev/null
+    sips -z 32 32     "$icon_source_png" --out "$iconset_dir/icon_32x32.png" >/dev/null
+    sips -z 64 64     "$icon_source_png" --out "$iconset_dir/icon_32x32@2x.png" >/dev/null
+    sips -z 128 128   "$icon_source_png" --out "$iconset_dir/icon_128x128.png" >/dev/null
+    sips -z 256 256   "$icon_source_png" --out "$iconset_dir/icon_128x128@2x.png" >/dev/null
+    sips -z 256 256   "$icon_source_png" --out "$iconset_dir/icon_256x256.png" >/dev/null
+    sips -z 512 512   "$icon_source_png" --out "$iconset_dir/icon_256x256@2x.png" >/dev/null
+    sips -z 512 512   "$icon_source_png" --out "$iconset_dir/icon_512x512.png" >/dev/null
+    sips -z 1024 1024 "$icon_source_png" --out "$iconset_dir/icon_512x512@2x.png" >/dev/null
+
+    iconutil -c icns "$iconset_dir" -o "$app_path/Contents/Resources/Pasteur.icns"
+    rm -rf "$iconset_dir"
+  else
+    log "Icon PNG not found at $icon_source_png (skipping .icns generation)"
+  fi
 fi
 
 plutil -lint "$app_path/Contents/Info.plist" >/dev/null

@@ -129,10 +129,8 @@ final class FormatDetector {
             }
         }
 
-        // Exclude file paths
-        if smiles.contains("/") || smiles.contains("\\") {
-            return false
-        }
+        // Do NOT exclude '/' or '\\' here: they are valid SMILES bond direction characters.
+        // File path detection is handled elsewhere (e.g. in AppDelegate.isFilePath).
 
         // Check balanced parentheses and brackets
         var parenCount = 0
