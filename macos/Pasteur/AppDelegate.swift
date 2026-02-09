@@ -57,10 +57,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     DispatchQueue.main.async { [weak self] in
                         self?.visualizeContent(fileContents, format: format)
                     }
+                } else if let salvagedXYZ = salvageXYZPayload(from: fileContents) {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.visualizeContent(salvagedXYZ, format: "xyz", rawText: salvagedXYZ)
+                    }
                 }
             } else if let format = formatDetector.detectFormat(for: trimmed) {
                 DispatchQueue.main.async { [weak self] in
                     self?.visualizeContent(trimmed, format: format, rawText: text)
+                }
+            } else if let salvagedXYZ = salvageXYZPayload(from: text) {
+                DispatchQueue.main.async { [weak self] in
+                    self?.visualizeContent(salvagedXYZ, format: "xyz", rawText: salvagedXYZ)
                 }
             }
         }
@@ -91,11 +99,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Check if it's a file path
         if isFilePath(trimmed) {
             if let fileContents = readFile(atPath: trimmed) {
-                guard let format = formatDetector.detectFormat(for: fileContents) else {
-                    showToast(message: "File doesn't contain a supported molecule format.")
+                if let format = formatDetector.detectFormat(for: fileContents) {
+                    visualizeContent(fileContents, format: format)
                     return
                 }
-                visualizeContent(fileContents, format: format)
+                if let salvagedXYZ = salvageXYZPayload(from: fileContents) {
+                    visualizeContent(salvagedXYZ, format: "xyz", rawText: salvagedXYZ)
+                    return
+                }
+                showToast(message: "File doesn't contain a supported molecule format.")
             } else {
                 showToast(message: "Could not read file.")
             }
@@ -103,12 +115,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Existing clipboard content handling
-        guard let format = formatDetector.detectFormat(for: trimmed) else {
-            showToast(message: "Clipboard doesn't look like a supported molecule format.")
+        if let format = formatDetector.detectFormat(for: trimmed) {
+            visualizeContent(trimmed, format: format, rawText: rawText)
             return
         }
 
-        visualizeContent(trimmed, format: format, rawText: rawText)
+        // Salvage: allow accidental extra lines above/below XYZ blocks (e.g. shell prompts).
+        if let salvagedXYZ = salvageXYZPayload(from: rawText) {
+            visualizeContent(salvagedXYZ, format: "xyz", rawText: salvagedXYZ)
+            return
+        }
+
+        showToast(message: "Clipboard doesn't look like a supported molecule format.")
     }
 
     @objc private func handleQuit() {
@@ -148,12 +166,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func visualizeContent(_ content: String, format: String, rawText: String? = nil) {
         viewerPanelController?.show()
+
         if format == "smiles" {
             viewerPanelController?.loadSMILES(content.trimmingCharacters(in: .whitespacesAndNewlines))
-        } else {
-            let payload = format == "xyz" ? normalizeXYZ(rawText ?? content) : content
-            viewerPanelController?.load(format: format, data: payload)
+            return
         }
+
+        if format == "xyz" {
+            let base = rawText ?? content
+            let salvaged = salvageXYZPayload(from: base) ?? base
+            let payload = normalizeXYZ(salvaged)
+            viewerPanelController?.load(format: format, data: payload)
+            return
+        }
+
+        viewerPanelController?.load(format: format, data: content)
     }
 
     @objc private func handlePreferences() {
@@ -211,6 +238,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if self.isFilePath(trimmed), let fileContents = self.readFile(atPath: trimmed) {
                 if let format = self.formatDetector.detectFormat(for: fileContents) {
                     self.visualizeContent(fileContents, format: format)
+                } else if let salvagedXYZ = self.salvageXYZPayload(from: fileContents) {
+                    self.visualizeContent(salvagedXYZ, format: "xyz", rawText: salvagedXYZ)
                 }
                 return
             }
@@ -218,10 +247,121 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Existing content handling
             if let format = self.formatDetector.detectFormat(for: trimmed) {
                 self.visualizeContent(trimmed, format: format, rawText: text)
+            } else if let salvagedXYZ = self.salvageXYZPayload(from: text) {
+                self.visualizeContent(salvagedXYZ, format: "xyz", rawText: salvagedXYZ)
             }
         }
         clipboardMonitor = monitor
         monitor.start()
+    }
+
+    /// Attempts to recover valid XYZ content from a messy clipboard selection.
+    ///
+    /// Common failure mode: the user accidentally copies a shell prompt line or other
+    /// noise above/below an XYZ block. Molstar's XYZ parser is fairly strict, so we
+    /// try to extract the first complete XYZ frame (and any subsequent complete frames)
+    /// and drop surrounding garbage.
+    ///
+    /// This is intentionally conservative: we only "salvage" when we can prove an XYZ
+    /// frame exists (atom count line + N atom records).
+    private func salvageXYZPayload(from text: String) -> String? {
+        let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).map(String.init)
+        guard !lines.isEmpty else { return nil }
+
+        func trimmedLine(_ index: Int) -> String {
+            lines[index].trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        func parseFrame(startIndex i: Int) -> (range: Range<Int>, nextIndex: Int)? {
+            let header = trimmedLine(i)
+            guard let countInfo = parseXYZCountLine(header) else { return nil }
+            let atomCount = countInfo.count
+            guard atomCount > 0 else { return nil }
+
+            let firstAfterHeader = i + 1
+            guard firstAfterHeader < lines.count else { return nil }
+
+            let atomStart: Int
+            if looksLikeAtomRecord(trimmedLine(firstAfterHeader)) {
+                // Non-standard XYZ (missing comment line): count is followed directly by atom records.
+                atomStart = firstAfterHeader
+            } else {
+                // Standard XYZ: count + comment + atoms.
+                atomStart = i + 2
+            }
+
+            let atomEndExclusive = atomStart + atomCount
+            guard atomEndExclusive <= lines.count else { return nil }
+
+            for j in atomStart..<atomEndExclusive {
+                if !looksLikeAtomRecord(trimmedLine(j)) {
+                    return nil
+                }
+            }
+
+            return (i..<atomEndExclusive, atomEndExclusive)
+        }
+
+        // 1) Try to find a proper XYZ frame (count line + atoms) anywhere in the text.
+        var firstFrameStart: Int?
+        for i in 0..<lines.count {
+            if parseFrame(startIndex: i) != nil {
+                firstFrameStart = i
+                break
+            }
+        }
+
+        if let start = firstFrameStart {
+            var extracted: [String] = []
+            extracted.reserveCapacity(lines.count)
+
+            var index = start
+            while index < lines.count {
+                // Allow blank separators between frames.
+                while index < lines.count, trimmedLine(index).isEmpty {
+                    index += 1
+                }
+                guard index < lines.count else { break }
+
+                guard let frame = parseFrame(startIndex: index) else { break }
+                extracted.append(contentsOf: lines[frame.range])
+                index = frame.nextIndex
+            }
+
+            // Drop trailing empty lines we might have pulled in.
+            while let last = extracted.last, last.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                extracted.removeLast()
+            }
+
+            let result = extracted.joined(separator: "\n")
+            return result.isEmpty ? nil : result
+        }
+
+        // 2) Fallback: headerless XYZ somewhere in the text (consecutive atom records).
+        // This is useful when the user only copies coordinates.
+        var i = 0
+        while i < lines.count {
+            if looksLikeAtomRecord(trimmedLine(i)) {
+                var j = i
+                while j < lines.count, looksLikeAtomRecord(trimmedLine(j)) {
+                    j += 1
+                }
+                let count = j - i
+                if count >= 3 {
+                    var result: [String] = []
+                    result.reserveCapacity(count + 2)
+                    result.append(String(count))
+                    result.append("")
+                    result.append(contentsOf: lines[i..<j])
+                    return result.joined(separator: "\n")
+                }
+                i = j
+            } else {
+                i += 1
+            }
+        }
+
+        return nil
     }
 
     private func normalizeXYZ(_ text: String) -> String {
